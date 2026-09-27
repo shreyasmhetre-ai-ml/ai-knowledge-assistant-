@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Knowledge Assistant</title>
+
+    <style>
+        body {
+            font-family: Arial;
+            background: #f4f4f4;
+            margin: 0;
+            padding: 30px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+        }
+
+        input {
+            padding: 10px;
+            margin: 5px;
+            width: 90%;
+        }
+
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            cursor: pointer;
+        }
+
+        #chatBox {
+            border: 1px solid #ddd;
+            padding: 15px;
+            min-height: 250px;
+            margin-top: 15px;
+            white-space: pre-wrap;
+        }
+
+        #status {
+            margin: 10px 0;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>🤖 AI Knowledge Assistant</h1>
+
+    <h2>🔐 Account</h2>
+
+    <input
+        type="text"
+        id="username"
+        placeholder="Username"
+    >
+
+    <input
+        type="password"
+        id="password"
+        placeholder="Password"
+    >
+
+    <br>
+
+    <button onclick="registerUser()">Register</button>
+
+    <button onclick="loginUser()">Login</button>
+
+    <div id="status">Please login first.</div>
+
+    <hr>
+
+    <h2>📄 Upload PDF</h2>
+
+    <input
+        type="file"
+        id="pdfFile"
+        accept=".pdf"
+    >
+
+    <button onclick="uploadPDF()">Upload PDF</button>
+
+    <p id="pdfStatus"></p>
+
+    <hr>
+
+    <h2>💬 Chat</h2>
+
+    <input
+        type="text"
+        id="message"
+        placeholder="Ask your question..."
+        onkeydown="handleEnter(event)"
+    >
+
+    <button onclick="sendMessage()">Send</button>
+
+    <button onclick="clearChat()">Clear Chat</button>
+
+    <div id="chatBox"></div>
+
+</div>
+
+
+<script>
+
+let sessionId = "";
+let loggedIn = false;
+
+
+async function registerUser() {
+
+    const username =
+        document.getElementById("username").value;
+
+    const password =
+        document.getElementById("password").value;
+
+
+    if (!username || !password) {
+
+        document.getElementById("status").innerText =
+            "Please enter username and password.";
+
+        return;
+    }
+
+
+    const response = await fetch("/register", {
+
+        method: "POST",
+
+        headers: {
+            "Content-Type": "application/json"
+        },
+
+        body: JSON.stringify({
+            username: username,
+            password: password
+        })
+    });
+
+
+    const data = await response.json();
+
+
+    if (data.success) {
+
+        document.getElementById("status").innerText =
+            "Registration successful! Now login.";
+
+    } else {
+
+        document.getElementById("status").innerText =
+            data.message;
+    }
+}
+
+
+async function loginUser() {
+
+    const username =
+        document.getElementById("username").value;
+
+    const password =
+        document.getElementById("password").value;
+
+
+    if (!username || !password) {
+
+        document.getElementById("status").innerText =
+            "Please enter username and password.";
+
+        return;
+    }
+
+
+    const response = await fetch("/login", {
+
+        method: "POST",
+
+        headers: {
+            "Content-Type": "application/json"
+        },
+
+        body: JSON.stringify({
+            username: username,
+            password: password
+        })
+    });
+
+
+    const data = await response.json();
+
+
+    if (data.success) {
+
+        loggedIn = true;
+
+        sessionId = "user_" + data.user_id;
+
+
+        document.getElementById("status").innerText =
+            "Logged in as " + data.username;
+
+    } else {
+
+        document.getElementById("status").innerText =
+            data.message;
+    }
+}
+
+
+async function sendMessage() {
+
+    if (!loggedIn) {
+
+        document.getElementById("status").innerText =
+            "Please login first.";
+
+        return;
+    }
+
+
+    const message =
+        document.getElementById("message").value;
+
+
+    if (!message) {
+        return;
+    }
+
+
+    const chatBox =
+        document.getElementById("chatBox");
+
+
+    chatBox.innerHTML +=
+        "\nYou: " + message + "\n";
+
+
+    document.getElementById("message").value = "";
+
+
+    const response = await fetch("/chat", {
+
+        method: "POST",
+
+        headers: {
+            "Content-Type": "application/json"
+        },
+
+        body: JSON.stringify({
+            message: message,
+            session_id: sessionId
+        })
+    });
+
+
+    const data = await response.json();
+
+
+    chatBox.innerHTML +=
+        "Bot: " + data.bot_response + "\n";
+}
+
+
+async function uploadPDF() {
+
+    if (!loggedIn) {
+
+        document.getElementById("pdfStatus").innerText =
+            "Please login first.";
+
+        return;
+    }
+
+
+    const fileInput =
+        document.getElementById("pdfFile");
+
+
+    if (!fileInput.files.length) {
+
+        document.getElementById("pdfStatus").innerText =
+            "Please select a PDF.";
+
+        return;
+    }
+
+
+    const formData = new FormData();
+
+    formData.append(
+        "file",
+        fileInput.files[0]
+    );
+
+
+    document.getElementById("pdfStatus").innerText =
+        "Uploading PDF...";
+
+
+    const response = await fetch("/upload-pdf", {
+
+        method: "POST",
+
+        body: formData
+    });
+
+
+    const data = await response.json();
+
+
+    document.getElementById("pdfStatus").innerText =
+        data.message;
+}
+
+
+function handleEnter(event) {
+
+    if (event.key === "Enter") {
+
+        sendMessage();
+    }
+}
+
+
+function clearChat() {
+
+    document.getElementById("chatBox").innerHTML = "";
+}
+
+</script>
+
+</body>
+</html>
